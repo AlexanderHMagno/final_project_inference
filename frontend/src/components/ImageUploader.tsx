@@ -13,7 +13,7 @@ import axios from 'axios'
 import tiff from 'tiff.js'
 import Swal from 'sweetalert2'
 
-const API_URL = 'http://localhost:8000'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const ImageUploader = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
