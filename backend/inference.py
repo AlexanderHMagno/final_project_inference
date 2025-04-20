@@ -6,10 +6,19 @@ import matplotlib.pyplot as plt
 import io
 import os
 from dotenv import load_dotenv
+import torch
+from ultralytics.nn.tasks import DetectionModel
+from torch.serialization import add_safe_globals
+
+# Add DetectionModel to safe globals
+add_safe_globals([DetectionModel])
 
 # Load environment variables
 load_dotenv()
-model = YOLO(os.getenv('MODEL_PATH'))
+
+# === Load YOLOv11 model from Ultralytics ===
+model_path = os.getenv('MODEL_PATH', 'yolo11n.pt')
+model = YOLO(model_path)
 
 # === Config ===
 PATCH_SIZE = 640
