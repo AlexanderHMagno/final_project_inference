@@ -1,0 +1,13 @@
+torch>=2.2.0
+torchvision>=0.17.0
+opencv-python>=4.8.0
+numpy>=1.24.0
+Pillow>=10.0.0
+gradio>=4.19.0
+ultralytics>=8.0.0
+matplotlib>=3.8.0
+fastapi>=0.109.0
+python-multipart>=0.0.6
+uvicorn>=0.27.0
+sweetalert2>=11.11.0
+python-dotenv>=1.0.1
