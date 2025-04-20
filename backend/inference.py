@@ -9,22 +9,28 @@ from dotenv import load_dotenv
 import torch
 from ultralytics.nn.tasks import DetectionModel
 from torch.serialization import add_safe_globals
+from torch.nn.modules.container import Sequential
 
-# Add DetectionModel to safe globals
-add_safe_globals([DetectionModel])
+# Add required classes to safe globals
+add_safe_globals([DetectionModel, Sequential])
 
 # Load environment variables
 load_dotenv()
 
 # === Load YOLOv11 model from Ultralytics ===
 model_path = os.getenv('MODEL_PATH', 'yolo11n.pt')
-model = YOLO(model_path)
+try:
+    model = YOLO(model_path)
+except Exception as e:
+    print(f"Attempting alternative loading method due to: {e}")
+    # Try alternative loading method with weights_only=False
+    model = torch.load(model_path, weights_only=False, map_location="cpu")
 
 # === Config ===
-PATCH_SIZE = 640
-STRIDE = 80
-CONF_THRESHOLD = 0.40
-IOU_THRESHOLD = 0.45
+PATCH_SIZE = int(os.getenv('PATCH_SIZE', 640))
+STRIDE = int(os.getenv('STRIDE', 80))
+CONF_THRESHOLD = float(os.getenv('CONF_THRESHOLD', 0.40))
+IOU_THRESHOLD = float(os.getenv('IOU_THRESHOLD', 0.45))
 
 def create_patches(image, patch_size, stride):
     h, w, _ = image.shape
