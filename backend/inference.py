@@ -7,6 +7,9 @@ import io
 import os
 from dotenv import load_dotenv
 
+from PIL import ImageDraw, ImageFont
+
+
 
 # Load environment variables
 load_dotenv()
@@ -53,88 +56,87 @@ def draw_boxes(image, boxes, scores=None):
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, thickness)
     return image
 
+
+
+
+
+
+def generate_patch_grid(patch_images, max_cols=5, padding=10):
+    """Create a single image showing all patches in a labeled grid."""
+    font = ImageFont.load_default()
+    cols = min(max_cols, len(patch_images))
+    rows = (len(patch_images) + cols - 1) // cols
+
+    patch_w, patch_h = patch_images[0].size
+    grid_w = cols * patch_w + (cols - 1) * padding
+    grid_h = rows * patch_h + (rows - 1) * padding + 20 * rows
+
+    grid_image = Image.new("RGB", (grid_w, grid_h), color=(255, 255, 255))
+    draw = ImageDraw.Draw(grid_image)
+
+    for idx, patch in enumerate(patch_images):
+        row = idx // cols
+        col = idx % cols
+        x = col * (patch_w + padding)
+        y = row * (patch_h + padding + 20)
+
+        grid_image.paste(patch, (x, y + 20))
+        draw.text((x + 5, y), f"Patch {idx}", fill=(0, 0, 0), font=font)
+
+    return grid_image
+
 def detect_people(image_input):
     """
-    Main detection function that processes an input image and returns both
-    the patch visualization and the final detection result.
-    
-    Args:
-        image_input (PIL.Image): Input image to process
-        
     Returns:
-        tuple: (patches_visualization, final_result_image)
+        - patch_images: List of patch images with bounding boxes (PIL)
+        - final_result_image: Merged detection result image (PIL)
+        - patch_grid_image: Grid of all patches with boxes and titles (PIL)
     """
     image = np.array(image_input.convert("RGB"))
     patches, coords, padded_image, was_padded, original_size = create_patches(image, PATCH_SIZE, STRIDE)
 
     all_boxes = []
     all_scores = []
-    print(f"Total patches: {len(patches)}")
-    
-    # Create a figure for displaying patches
-    n_patches = len(patches)
-    n_cols = min(5, n_patches)
-    n_rows = (n_patches + n_cols - 1) // n_cols
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 3*n_rows))
-    if n_rows == 1:
-        axes = axes.reshape(1, -1)
-    
-    for i, (patch, (x_off, y_off)) in enumerate(zip(patches, coords)):
-        results = model.predict(patch)
-        print(f"Processing patch {i}")
+    patch_images = []
 
-        # Create a copy of the patch for visualization
-        patch_vis = patch.copy()
-        
+    for patch, (x_off, y_off) in zip(patches, coords):
+        results = model.predict(patch)
+
+        # Draw boxes on patch
+        patch_boxes = []
+        patch_scores = []
+
         for det in results[0].boxes.data.cpu().numpy():
             x1, y1, x2, y2, conf, cls = det
-
             if conf < CONF_THRESHOLD:
                 continue
 
-            # Draw box on patch visualization
-            cv2.rectangle(patch_vis, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-            
-            # Adjust coordinates for full image
+            # Store for full-image merge
             x1_adj = x1 + x_off
             y1_adj = y1 + y_off
             x2_adj = x2 + x_off
             y2_adj = y2 + y_off
-            
             all_boxes.append([x1_adj, y1_adj, x2_adj, y2_adj])
             all_scores.append(conf)
-            
-            print(f"Patch {i} detection: x1={x1:.2f}, y1={y1:.2f}, x2={x2:.2f}, y2={y2:.2f}, conf={conf:.2f}")
-        
-        # Display patch in matplotlib subplot
-        row = i // n_cols
-        col = i % n_cols
-        axes[row, col].imshow(cv2.cvtColor(patch_vis, cv2.COLOR_BGR2RGB))
-        axes[row, col].set_title(f'Patch {i}')
-        axes[row, col].axis('off')
 
-    # Hide empty subplots
-    for i in range(len(patches), n_rows * n_cols):
-        row = i // n_cols
-        col = i % n_cols
-        axes[row, col].axis('off')
-        
-    plt.tight_layout()
+            # Store for patch drawing
+            patch_boxes.append([x1, y1, x2, y2])
+            patch_scores.append(conf)
 
-       # Save figure to a temporary buffer
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', dpi=100)
-    plt.close()
-    buf.seek(0)
-    patches_image = Image.open(buf)
+        # Draw patch-level boxes
+        patch_with_boxes = draw_boxes(patch.copy(), patch_boxes, patch_scores)
+        patch_pil = Image.fromarray(patch_with_boxes)
+        patch_images.append(patch_pil)
 
-    # Create merged image with all detections
+    # Final full image with all detections
     result_image = padded_image.copy()
     if len(all_boxes) > 0:
         result_image = draw_boxes(result_image, all_boxes, all_scores)
-    
     if was_padded:
         h, w = original_size
         result_image = result_image[:h, :w]
 
-    return patches_image, Image.fromarray(result_image)
+    # Generate grid view of patches with boxes
+    patch_grid_image = generate_patch_grid(patch_images)
+
+    return patch_grid_image, Image.fromarray(result_image)

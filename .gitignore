@@ -4,3 +4,4 @@ SAR/*
 util/*
 src/*
 __pycache__
+*.pyc
