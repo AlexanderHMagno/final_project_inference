@@ -6,25 +6,14 @@ import matplotlib.pyplot as plt
 import io
 import os
 from dotenv import load_dotenv
-import torch
-from ultralytics.nn.tasks import DetectionModel
-from torch.serialization import add_safe_globals
-from torch.nn.modules.container import Sequential
 
-# Add required classes to safe globals
-add_safe_globals([DetectionModel, Sequential])
 
 # Load environment variables
 load_dotenv()
 
+
 # === Load YOLOv11 model from Ultralytics ===
-model_path = os.getenv('MODEL_PATH', 'yolo11n.pt')
-try:
-    model = YOLO(model_path)
-except Exception as e:
-    print(f"Attempting alternative loading method due to: {e}")
-    # Try alternative loading method with weights_only=False
-    model = torch.load(model_path, weights_only=False, map_location="cpu")
+model = YOLO(os.getenv('MODEL_PATH', 'util/yolo11n.pt'))
 
 # === Config ===
 PATCH_SIZE = int(os.getenv('PATCH_SIZE', 640))
