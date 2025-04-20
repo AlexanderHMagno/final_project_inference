@@ -2,13 +2,13 @@ import cv2
 import numpy as np
 from PIL import Image
 from ultralytics import YOLO
-from dotenv import load_dotenv
 import matplotlib.pyplot as plt
 import io
 import os
+from dotenv import load_dotenv
 
+# Load environment variables
 load_dotenv()
-
 model = YOLO(os.getenv('MODEL_PATH'))
 
 # === Config ===
