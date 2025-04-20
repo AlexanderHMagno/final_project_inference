@@ -7,3 +7,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0 
+      - key: PORT
+        value: 8000
+      - key: FRONTEND_URL
+        value: https://final-project-inference.onrender.com/
+      - key: MODEL_PATH
+        value: util/yolo11n.pt
